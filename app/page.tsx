@@ -1,5 +1,5 @@
-import DashboardPage from "./dashboard/page";
+import RegisterPage from "../app/auth/register/page";
 
 export default function Home() {
-  return <DashboardPage />;
+  return <RegisterPage />;
 }
