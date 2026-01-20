@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { useState } from "react";
 
 interface Item {
   name: string;
@@ -9,10 +9,10 @@ interface Item {
   price: string;
 }
 
-interface PreviewInvoiceModalProps {
+interface PaymentDetailModalProps {
   open: boolean;
   onClose: () => void;
-  invoiceNumber: string;
+  invoiceNumber: string; // you can think of this as payment ID
   description: string;
   issuedOn: string;
   dueOn: string;
@@ -20,9 +20,12 @@ interface PreviewInvoiceModalProps {
   recipientAddress: string;
   items: Item[];
   total: number;
+  companyName?: string;
+  companyAddress?: string;
+  companyLogoUrl?: string;
 }
 
-export default function PreviewInvoiceModal({
+export default function PaymentDetailModal({
   open,
   onClose,
   invoiceNumber,
@@ -33,15 +36,13 @@ export default function PreviewInvoiceModal({
   recipientAddress,
   items,
   total,
-}: PreviewInvoiceModalProps) {
+  companyName = "Acme Corp.",
+  companyAddress = "123 Main Street, Cityville, Country",
+  companyLogoUrl = "https://via.placeholder.com/80",
+}: PaymentDetailModalProps) {
   const [notes, setNotes] = useState("");
 
   if (!open) return null;
-
-  // Mock company details
-  const companyLogoUrl = "https://via.placeholder.com/80";
-  const companyName = "Acme Corp.";
-  const companyAddress = "123 Main Street, Cityville, Country";
 
   return (
     <>
@@ -56,12 +57,10 @@ export default function PreviewInvoiceModal({
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl p-8 relative overflow-y-auto max-h-[90vh] flex flex-col">
           {/* Header */}
           <div className="flex justify-between mb-4">
-            {/* Left: Invoice number + description + dates */}
+            {/* Left */}
             <div>
               <h1 className="text-2xl font-bold text-black">{invoiceNumber}</h1>
-              <p className="text-base text-black mt-1">{description}</p>
-
-              {/* Issued on / Due on side by side */}
+              <p className="text-base text-black mt-1 font-medium">{description}</p>
               <div className="flex gap-6 mt-2 text-base text-black">
                 <div className="flex flex-col">
                   <span className="font-semibold">Issued on</span>
@@ -74,26 +73,28 @@ export default function PreviewInvoiceModal({
               </div>
             </div>
 
-            {/* Right: Company details */}
+            {/* Right: Company info */}
             <div className="text-right flex flex-col items-end">
-              <img
-                src={companyLogoUrl}
-                alt="Company Logo"
-                className="w-20 h-20 object-contain mb-2"
-              />
-              <p className="text-black font-semibold">{companyName}</p>
-              <p className="text-black text-sm">{companyAddress}</p>
+              {companyLogoUrl && (
+                <img
+                  src={companyLogoUrl}
+                  alt="Company Logo"
+                  className="w-20 h-20 object-contain mb-2"
+                />
+              )}
+              <p className="font-semibold text-black">{companyName}</p>
+              <p className="text-sm text-black">{companyAddress}</p>
             </div>
           </div>
 
           {/* Recipient */}
           <div className="mb-6 text-base text-black">
-            <p className="font-semibold text-black mb-1">Invoice for:</p>
+            <p className="font-semibold mb-1">Payment to:</p>
             <p>{recipient}</p>
             <p>{recipientAddress}</p>
           </div>
 
-          {/* Items table inside card */}
+          {/* Items Table */}
           <div className="bg-gray-50 rounded-lg shadow p-4 mb-4 overflow-x-auto">
             <table className="w-full border-collapse text-base text-black">
               <thead>
@@ -123,38 +124,26 @@ export default function PreviewInvoiceModal({
 
           {/* Notes + Total */}
           <div className="flex justify-between items-start mb-6 gap-4">
-            {/* Notes textarea */}
             <textarea
-              className="flex-1 border rounded p-2 text-base text-black resize-none placeholder-gray-400"
-              placeholder="Here you can write additional notes for the client to get a better understanding of the invoice"
+              className="flex-1 border rounded p-2 text-base text-black placeholder-gray-400 resize-none"
+              placeholder="Add notes about this payment..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={4}
             />
-
-            {/* Total outside the card */}
             <div className="flex-shrink-0 flex flex-col justify-start text-xl font-bold text-black">
-              <span>Total Amount: ${total.toFixed(2)}</span>
+              <span>Total: ${total.toFixed(2)}</span>
             </div>
           </div>
 
           {/* Footer */}
           <div className="mt-auto flex justify-between items-start pt-6 border-t">
-            {/* Left side */}
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2 text-blue-600 font-medium cursor-pointer hover:underline">
                 <ArrowDownTrayIcon className="w-5 h-5" />
-                DOWNLOAD INVOICE
+                DOWNLOAD PAYMENT
               </div>
-              <p className="text-sm text-black">
-                You can update your logo and the brand color in{" "}
-                <span className="text-blue-600 font-medium cursor-pointer">
-                  payment settings
-                </span>.
-              </p>
             </div>
-
-            {/* Right side */}
             <button
               onClick={onClose}
               className="px-4 py-2 border border-black text-black rounded bg-white hover:bg-gray-100 font-medium"

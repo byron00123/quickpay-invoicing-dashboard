@@ -8,6 +8,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 import CreateInvoiceSlideOver from "@/components/invoices/CreateInvoiceSlideOver";
+import PaymentDetailModal from "@/components/payments/PaymentDetailModal"; // new modal component
 
 export default function PaymentsPage() {
   const invoices = [
@@ -19,6 +20,7 @@ export default function PaymentsPage() {
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<typeof invoices[0] | null>(null);
 
   const user = { name: "John Doe" };
   const initial = user.name[0];
@@ -164,24 +166,21 @@ export default function PaymentsPage() {
               return (
                 <div
                   key={inv.no}
-                  className="flex flex-col md:flex-row md:items-center bg-white p-4 rounded-xl shadow hover:shadow-lg transition"
+                  className="flex flex-col md:flex-row md:items-center bg-white p-4 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
+                  onClick={() => setSelectedPayment(inv)} // open modal
                 >
                   <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 flex-1 text-gray-900 font-medium">
                     <span className="w-24">{inv.no}</span>
                     <span className="w-32">{inv.date}</span>
                     <span className="flex-1">{inv.client}</span>
-                    <span className="w-40 text-right pr-4">
-                      {inv.amount}
-                    </span>
+                    <span className="w-40 text-right pr-4">{inv.amount}</span>
                   </div>
 
                   <div
                     className={`mt-2 md:mt-0 w-40 flex items-center justify-center gap-2 px-3 py-1 border rounded-full
                                 ${status.text} ${status.border} font-semibold`}
                   >
-                    <span
-                      className={`w-2 h-2 rounded-full ${status.dot}`}
-                    />
+                    <span className={`w-2 h-2 rounded-full ${status.dot}`} />
                     {inv.status}
                   </div>
                 </div>
@@ -196,6 +195,22 @@ export default function PaymentsPage() {
         open={invoiceOpen}
         onClose={() => setInvoiceOpen(false)}
       />
+
+      {/* Payment Detail Modal */}
+      {selectedPayment && (
+        <PaymentDetailModal
+          open={!!selectedPayment}
+          onClose={() => setSelectedPayment(null)}
+          invoiceNumber={selectedPayment.no}
+          description="Payment Details"
+          issuedOn="Jan 1, 2023"
+          dueOn="Jan 15, 2023"
+          recipient={selectedPayment.client}
+          recipientAddress="123 Client Street"
+          items={[{ name: "Service Fee", qty: "1", price: selectedPayment.amount.replace("$", "") }]}
+          total={parseFloat(selectedPayment.amount.replace("$", ""))}
+        />
+      )}
     </>
   );
 }
