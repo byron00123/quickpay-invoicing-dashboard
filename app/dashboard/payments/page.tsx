@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import {
   BellIcon,
   ChevronDownIcon,
@@ -8,19 +9,22 @@ import {
 } from "@heroicons/react/24/outline";
 
 import CreateInvoiceSlideOver from "@/components/invoices/CreateInvoiceSlideOver";
-import PaymentDetailModal from "@/components/payments/PaymentDetailModal"; // new modal component
+import PaymentDetailModal from "@/components/payments/PaymentDetailModal";
+
+import { RootState, AppDispatch } from "@/store/index";
+import { openInvoice, closeInvoice, selectPayment } from "@/store/paymentSlice";
 
 export default function PaymentsPage() {
-  const invoices = [
-    { no: "#BCS101", date: "Jun 21, 2020", client: "Alexander Parkinson", amount: "$1254.50", status: "Pending" },
-    { no: "#CDF254", date: "May 16, 2020", client: "Intutive Holdings Pvt. Ltd.", amount: "$654.25", status: "Draft" },
-    { no: "#SWE254", date: "Apr 12, 2020", client: "Thomas Lee", amount: "$2547.32", status: "Paid" },
-    { no: "#SWE255", date: "Apr 12, 2020", client: "Thomas Lee", amount: "$2547.32", status: "Paid" },
-  ];
+  const dispatch = useDispatch<AppDispatch>();
+
+  // Get state from Redux
+  const invoices = useSelector((state: RootState) => state.payment.invoices);
+  const selectedPayment = useSelector(
+    (state: RootState) => state.payment.selectedPayment
+  );
+  const invoiceOpen = useSelector((state: RootState) => state.payment.invoiceOpen);
 
   const [profileOpen, setProfileOpen] = useState(false);
-  const [invoiceOpen, setInvoiceOpen] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<typeof invoices[0] | null>(null);
 
   const user = { name: "John Doe" };
   const initial = user.name[0];
@@ -120,7 +124,7 @@ export default function PaymentsPage() {
             <h2 className="text-lg font-semibold text-gray-700">Invoices</h2>
 
             <button
-              onClick={() => setInvoiceOpen(true)}
+              onClick={() => dispatch(openInvoice())}
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
             >
               + New Invoice
@@ -167,7 +171,7 @@ export default function PaymentsPage() {
                 <div
                   key={inv.no}
                   className="flex flex-col md:flex-row md:items-center bg-white p-4 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
-                  onClick={() => setSelectedPayment(inv)} // open modal
+                  onClick={() => dispatch(selectPayment(inv))}
                 >
                   <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 flex-1 text-gray-900 font-medium">
                     <span className="w-24">{inv.no}</span>
@@ -193,21 +197,27 @@ export default function PaymentsPage() {
       {/* Invoice Drawer */}
       <CreateInvoiceSlideOver
         open={invoiceOpen}
-        onClose={() => setInvoiceOpen(false)}
+        onClose={() => dispatch(closeInvoice())}
       />
 
       {/* Payment Detail Modal */}
       {selectedPayment && (
         <PaymentDetailModal
           open={!!selectedPayment}
-          onClose={() => setSelectedPayment(null)}
+          onClose={() => dispatch(selectPayment(null))}
           invoiceNumber={selectedPayment.no}
           description="Payment Details"
           issuedOn="Jan 1, 2023"
           dueOn="Jan 15, 2023"
           recipient={selectedPayment.client}
           recipientAddress="123 Client Street"
-          items={[{ name: "Service Fee", qty: "1", price: selectedPayment.amount.replace("$", "") }]}
+          items={[
+            {
+              name: "Service Fee",
+              qty: "1",
+              price: selectedPayment.amount.replace("$", ""),
+            },
+          ]}
           total={parseFloat(selectedPayment.amount.replace("$", ""))}
         />
       )}

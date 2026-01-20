@@ -2,6 +2,8 @@
 
 import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { useState } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/index"; // make sure this points to your store entry
 
 interface Item {
   name: string;
@@ -12,7 +14,7 @@ interface Item {
 interface PaymentDetailModalProps {
   open: boolean;
   onClose: () => void;
-  invoiceNumber: string; // you can think of this as payment ID
+  invoiceNumber: string; // payment ID
   description: string;
   issuedOn: string;
   dueOn: string;
@@ -20,9 +22,6 @@ interface PaymentDetailModalProps {
   recipientAddress: string;
   items: Item[];
   total: number;
-  companyName?: string;
-  companyAddress?: string;
-  companyLogoUrl?: string;
 }
 
 export default function PaymentDetailModal({
@@ -36,11 +35,15 @@ export default function PaymentDetailModal({
   recipientAddress,
   items,
   total,
-  companyName = "Acme Corp.",
-  companyAddress = "123 Main Street, Cityville, Country",
-  companyLogoUrl = "https://via.placeholder.com/80",
 }: PaymentDetailModalProps) {
   const [notes, setNotes] = useState("");
+
+  // Get company info from Redux
+  const companyInfo = useSelector((state: RootState) => ({
+    name: state.payment.companyInfo.name,
+    address: state.payment.companyInfo.address,
+    logoUrl: state.payment.companyInfo.logoUrl,
+  }));
 
   if (!open) return null;
 
@@ -55,12 +58,12 @@ export default function PaymentDetailModal({
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl p-8 relative overflow-y-auto max-h-[90vh] flex flex-col">
+          
           {/* Header */}
           <div className="flex justify-between mb-4">
-            {/* Left */}
             <div>
               <h1 className="text-2xl font-bold text-black">{invoiceNumber}</h1>
-              <p className="text-base text-black mt-1 font-medium">{description}</p>
+              <p className="text-base font-medium text-black mt-1">{description}</p>
               <div className="flex gap-6 mt-2 text-base text-black">
                 <div className="flex flex-col">
                   <span className="font-semibold">Issued on</span>
@@ -73,17 +76,17 @@ export default function PaymentDetailModal({
               </div>
             </div>
 
-            {/* Right: Company info */}
+            {/* Company info */}
             <div className="text-right flex flex-col items-end">
-              {companyLogoUrl && (
+              {companyInfo.logoUrl && (
                 <img
-                  src={companyLogoUrl}
+                  src={companyInfo.logoUrl}
                   alt="Company Logo"
                   className="w-20 h-20 object-contain mb-2"
                 />
               )}
-              <p className="font-semibold text-black">{companyName}</p>
-              <p className="text-sm text-black">{companyAddress}</p>
+              <p className="font-semibold text-black">{companyInfo.name}</p>
+              <p className="text-sm text-black">{companyInfo.address}</p>
             </div>
           </div>
 
