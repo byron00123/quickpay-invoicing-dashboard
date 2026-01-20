@@ -38,7 +38,7 @@ export default function PreviewInvoiceModal({
 
   if (!open) return null;
 
-  // Mock company details
+  // Mock company details (can later be taken from Redux)
   const companyLogoUrl = "https://via.placeholder.com/80";
   const companyName = "Acme Corp.";
   const companyAddress = "123 Main Street, Cityville, Country";
@@ -61,7 +61,6 @@ export default function PreviewInvoiceModal({
               <h1 className="text-2xl font-bold text-black">{invoiceNumber}</h1>
               <p className="text-base text-black mt-1">{description}</p>
 
-              {/* Issued on / Due on side by side */}
               <div className="flex gap-6 mt-2 text-base text-black">
                 <div className="flex flex-col">
                   <span className="font-semibold">Issued on</span>
@@ -88,12 +87,12 @@ export default function PreviewInvoiceModal({
 
           {/* Recipient */}
           <div className="mb-6 text-base text-black">
-            <p className="font-semibold text-black mb-1">Invoice for:</p>
+            <p className="font-semibold mb-1">Invoice for:</p>
             <p>{recipient}</p>
             <p>{recipientAddress}</p>
           </div>
 
-          {/* Items table inside card */}
+          {/* Items table */}
           <div className="bg-gray-50 rounded-lg shadow p-4 mb-4 overflow-x-auto">
             <table className="w-full border-collapse text-base text-black">
               <thead>
@@ -123,16 +122,14 @@ export default function PreviewInvoiceModal({
 
           {/* Notes + Total */}
           <div className="flex justify-between items-start mb-6 gap-4">
-            {/* Notes textarea */}
             <textarea
               className="flex-1 border rounded p-2 text-base text-black resize-none placeholder-gray-400"
-              placeholder="Here you can write additional notes for the client to get a better understanding of the invoice"
+              placeholder="Additional notes for the client"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={4}
             />
 
-            {/* Total outside the card */}
             <div className="flex-shrink-0 flex flex-col justify-start text-xl font-bold text-black">
               <span>Total Amount: ${total.toFixed(2)}</span>
             </div>
@@ -140,21 +137,19 @@ export default function PreviewInvoiceModal({
 
           {/* Footer */}
           <div className="mt-auto flex justify-between items-start pt-6 border-t">
-            {/* Left side */}
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2 text-blue-600 font-medium cursor-pointer hover:underline">
                 <ArrowDownTrayIcon className="w-5 h-5" />
                 DOWNLOAD INVOICE
               </div>
               <p className="text-sm text-black">
-                You can update your logo and the brand color in{" "}
+                Update logo and brand color in{" "}
                 <span className="text-blue-600 font-medium cursor-pointer">
                   payment settings
                 </span>.
               </p>
             </div>
 
-            {/* Right side */}
             <button
               onClick={onClose}
               className="px-4 py-2 border border-black text-black rounded bg-white hover:bg-gray-100 font-medium"

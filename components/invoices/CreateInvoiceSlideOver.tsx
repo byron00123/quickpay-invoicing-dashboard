@@ -2,7 +2,11 @@
 
 import { XMarkIcon, ClipboardIcon } from "@heroicons/react/24/outline";
 import { useState, useMemo } from "react";
-import PreviewInvoiceModal from "./PreviewInvoiceModal"; // import your modal
+import { useDispatch } from "react-redux";
+import PreviewInvoiceModal from "./PreviewInvoiceModal";
+import { AppDispatch } from "@/store/index";
+import { addInvoice, closeInvoice } from "@/store/paymentSlice";
+import { invoiceSchema, InvoiceFormData } from "@/utils/invoiceSchema";
 
 interface Props {
   open: boolean;
@@ -11,11 +15,13 @@ interface Props {
 
 interface Item {
   name: string;
-  qty: string;
-  price: string;
+  qty: string; // keep as string for typing
+  price: string; // keep as string for typing
 }
 
 export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
+  const dispatch = useDispatch<AppDispatch>();
+
   const [selectedRecipient, setSelectedRecipient] = useState(
     "Alex Parkinson (alex@email.com)"
   );
@@ -25,11 +31,13 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
     { name: "Legal Advising", qty: "2", price: "500" },
     { name: "Consulting", qty: "1", price: "300" },
   ]);
-
   const [description, setDescription] = useState("Legal Consulting");
   const [issuedOn, setIssuedOn] = useState("2026-01-20");
   const [dueOn, setDueOn] = useState("2026-02-20");
+  const [notes, setNotes] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+
+  const [errors, setErrors] = useState<string[]>([]);
 
   const recipients = [
     "Alex Parkinson (alex@email.com)",
@@ -46,6 +54,44 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
       return sum + qty * price;
     }, 0);
   }, [items]);
+
+  const handleSend = () => {
+    // Let Zod handle string -> number conversion
+    const result = invoiceSchema.safeParse({
+      recipient: selectedRecipient,
+      description,
+      issuedOn,
+      dueOn,
+      recurring,
+      items, // qty & price as strings; Zod transforms them
+      notes,
+    });
+
+    if (!result.success) {
+      const newErrors = result.error.issues.map(
+        (issue) => `${issue.path.join(".")}: ${issue.message}`
+      );
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors([]);
+    const formData: InvoiceFormData = result.data; // Now qty & price are numbers
+
+    const total = formData.items.reduce((sum, item) => sum + item.qty * item.price, 0);
+
+    const newInvoiceNumber = `#INV${Math.floor(Math.random() * 9000 + 1000)}`;
+    const newInvoice = {
+      no: newInvoiceNumber,
+      date: issuedOn,
+      client: selectedRecipient,
+      amount: `$${total.toFixed(2)}`,
+      status: recurring ? "Draft" : "Pending",
+    };
+
+    dispatch(addInvoice(newInvoice));
+    dispatch(closeInvoice());
+  };
 
   return (
     <>
@@ -177,7 +223,6 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
 
           {/* Items */}
           <div className="space-y-2">
-            {/* Header */}
             <div className="flex text-sm font-medium text-black">
               <div className="flex-1">Item</div>
               <div className="w-16 text-center">Qty</div>
@@ -185,7 +230,6 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
               <div className="w-24 text-right">Total</div>
             </div>
 
-            {/* Rows */}
             {items.map((item, index) => (
               <div key={index} className="flex gap-2 relative">
                 <input
@@ -223,12 +267,8 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
               </div>
             ))}
 
-            {/* Add item + Total */}
             <div className="flex justify-between items-center mt-2">
-              <button
-                className="text-blue-600 text-sm font-medium"
-                onClick={addItem}
-              >
+              <button className="text-blue-600 text-sm font-medium" onClick={addItem}>
                 + Add item
               </button>
               <div className="flex items-center gap-2">
@@ -241,8 +281,21 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
           {/* Notes */}
           <div>
             <label className="text-sm font-medium text-black">Additional Notes</label>
-            <textarea className="mt-1 w-full border rounded px-3 py-2 text-black" />
+            <textarea
+              className="mt-1 w-full border rounded px-3 py-2 text-black"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
           </div>
+
+          {/* Inline errors */}
+          {errors.length > 0 && (
+            <div className="mt-4 text-red-500 text-sm space-y-1">
+              {errors.map((err, i) => (
+                <p key={i}>{err}</p>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -254,13 +307,16 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
             Preview
           </button>
           <div className="flex gap-3">
-            <button className="px-4 py-2 border rounded text-black">Save as draft</button>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded">Send</button>
+            <button className="px-4 py-2 border rounded text-black" onClick={handleSend}>
+              Save as draft
+            </button>
+            <button className="px-4 py-2 bg-blue-600 text-white rounded" onClick={handleSend}>
+              Send
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Preview Invoice Modal */}
       <PreviewInvoiceModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}

@@ -6,7 +6,7 @@ interface Item {
   price: string;
 }
 
-interface Payment {
+export interface Payment {
   no: string;
   date: string;
   client: string;
@@ -14,17 +14,17 @@ interface Payment {
   status: string;
 }
 
-interface CompanyInfo {
+export interface CompanyInfo {
   name: string;
   address: string;
   logoUrl: string;
 }
 
-interface PaymentState {
+export interface PaymentState {
   invoices: Payment[];
   selectedPayment: Payment | null;
   invoiceOpen: boolean;
-  companyInfo: CompanyInfo; // new
+  companyInfo: CompanyInfo;
 }
 
 const initialState: PaymentState = {
@@ -56,13 +56,15 @@ export const paymentSlice = createSlice({
     selectPayment: (state, action: PayloadAction<Payment | null>) => {
       state.selectedPayment = action.payload;
     },
-    // New reducers to update company info dynamically
     updateCompanyInfo: (state, action: PayloadAction<CompanyInfo>) => {
       state.companyInfo = action.payload;
+    },
+    addInvoice: (state, action: PayloadAction<Payment>) => {
+      state.invoices.push(action.payload);
     },
   },
 });
 
-export const { openInvoice, closeInvoice, selectPayment, updateCompanyInfo } = paymentSlice.actions;
+export const { openInvoice, closeInvoice, selectPayment, updateCompanyInfo, addInvoice } = paymentSlice.actions;
 
 export default paymentSlice.reducer;
