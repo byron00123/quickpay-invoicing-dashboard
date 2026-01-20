@@ -10,7 +10,7 @@ import NotificationBell from "@/components/notification/NotificationBell";
 import ProfileDropdown from "@/components/Profile/ProfileDropdown";
 
 import { RootState, AppDispatch } from "@/store/index";
-import { openInvoice, closeInvoice, selectPayment, addInvoice } from "@/store/paymentSlice";
+import { openInvoice, closeInvoice, selectPayment, setInvoices } from "@/store/paymentSlice";
 import { supabase } from "@/lib/supabase/client";
 
 export default function PaymentsPage() {
@@ -31,7 +31,7 @@ export default function PaymentsPage() {
     Pending: { text: "text-blue-600", border: "border-blue-600", dot: "bg-blue-600" },
   };
 
-  // Fetch invoices
+  // Fetch invoices from Supabase
   const fetchInvoices = async () => {
     try {
       setLoading(true);
@@ -44,15 +44,16 @@ export default function PaymentsPage() {
 
       if (data) {
         const fetchedInvoices = data.map((inv: any) => ({
-          id: inv.id, // <-- add unique ID for React key
-          no: inv.invoice_number,
-          client: inv.recipient,
+          id: inv.id,
+          no: inv.invoice_number ?? "",
+          client: inv.recipient ?? "",
           amount: `$${parseFloat(inv.total).toFixed(2)}`,
-          status: inv.status,
-          date: inv.issued_on,
+          status: inv.status ?? "Draft",
+          date: inv.issued_on ?? "",
         }));
 
-        fetchedInvoices.forEach((inv) => dispatch(addInvoice(inv)));
+        // Replace all invoices at once (prevents duplicates)
+        dispatch(setInvoices(fetchedInvoices));
       }
     } catch (err) {
       console.error("Failed to fetch invoices:", err);
@@ -65,16 +66,19 @@ export default function PaymentsPage() {
     fetchInvoices();
   }, []);
 
+  // Filtered & searched invoices
   const filteredInvoices = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+
     return invoices.filter((inv) => {
       const matchesSearch =
-        inv.no.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        inv.client.toLowerCase().includes(searchQuery.toLowerCase());
+        (inv.no?.toLowerCase() || "").includes(query) ||
+        (inv.client?.toLowerCase() || "").includes(query);
 
       const matchesStatus =
         statusFilter === "Show All" ||
-        (statusFilter === "Show Pending" && inv.status === "Pending") ||
         (statusFilter === "Show Paid" && inv.status === "Paid") ||
+        (statusFilter === "Show Pending" && inv.status === "Pending") ||
         (statusFilter === "Show Draft" && inv.status === "Draft");
 
       return matchesSearch && matchesStatus;
@@ -82,6 +86,9 @@ export default function PaymentsPage() {
   }, [invoices, searchQuery, statusFilter]);
 
   const statusOptions = ["Show All", "Show Paid", "Show Pending", "Show Draft"];
+
+  // Helper for totals
+  const parseAmount = (amt: string) => parseFloat(amt.replace("$", "") || "0");
 
   return (
     <>
@@ -102,7 +109,7 @@ export default function PaymentsPage() {
             <p className="text-3xl font-bold text-gray-900 mt-2">
               {invoices
                 .filter((inv) => inv.status === "Paid")
-                .reduce((sum, inv) => sum + parseFloat(inv.amount.replace("$", "")), 0)
+                .reduce((sum, inv) => sum + parseAmount(inv.amount), 0)
                 .toFixed(2)}
             </p>
             <div className="flex gap-4 mt-2 text-sm text-gray-600">
@@ -110,14 +117,14 @@ export default function PaymentsPage() {
                 Pending: $
                 {invoices
                   .filter((inv) => inv.status === "Pending")
-                  .reduce((sum, inv) => sum + parseFloat(inv.amount.replace("$", "")), 0)
+                  .reduce((sum, inv) => sum + parseAmount(inv.amount), 0)
                   .toFixed(2)}
               </span>
               <span>
                 In Drafts: $
                 {invoices
                   .filter((inv) => inv.status === "Draft")
-                  .reduce((sum, inv) => sum + parseFloat(inv.amount.replace("$", "")), 0)
+                  .reduce((sum, inv) => sum + parseAmount(inv.amount), 0)
                   .toFixed(2)}
               </span>
             </div>
@@ -204,7 +211,7 @@ export default function PaymentsPage() {
                 const status = statusStyles[inv.status];
                 return (
                   <div
-                    key={inv.id} // <-- use unique ID here
+                    key={inv.id}
                     className="flex flex-col md:flex-row md:items-center bg-white p-4 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
                     onClick={() => dispatch(selectPayment(inv))}
                   >
@@ -238,8 +245,8 @@ export default function PaymentsPage() {
           onClose={() => dispatch(selectPayment(null))}
           invoiceNumber={selectedPayment.no}
           description="Payment Details"
-          issuedOn="Jan 1, 2023"
-          dueOn="Jan 15, 2023"
+          issuedOn={selectedPayment.date}
+          dueOn={selectedPayment.date}
           recipient={selectedPayment.client}
           recipientAddress="123 Client Street"
           items={[
@@ -249,7 +256,7 @@ export default function PaymentsPage() {
               price: selectedPayment.amount.replace("$", ""),
             },
           ]}
-          total={parseFloat(selectedPayment.amount.replace("$", ""))}
+          total={parseAmount(selectedPayment.amount)}
         />
       )}
     </>

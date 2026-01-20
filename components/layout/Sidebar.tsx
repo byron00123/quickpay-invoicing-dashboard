@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   HomeIcon,
   BuildingOffice2Icon,
@@ -27,14 +28,23 @@ export default function Sidebar() {
   ];
 
   const bottomLinks = [
-    { name: "Get Help", icon: <HomeIcon className="w-5 h-5" />, href: "/dashboard/help" }, // replace icon if needed
+    { name: "Get Help", icon: <HomeIcon className="w-5 h-5" />, href: "/dashboard/help" },
     { name: "Chat with us", icon: <ChatBubbleBottomCenterIcon className="w-5 h-5" />, href: "/dashboard/chat" },
   ];
 
   return (
-    <div className="w-64 bg-blue-700 text-white flex flex-col p-6 relative z-0">
+    <aside className="w-64 bg-blue-700 text-white flex flex-col p-6">
       {/* Logo */}
-      <div className="text-2xl font-bold mb-10">QuickPay</div>
+      <div className="mb-10 flex items-center gap-3">
+        <Image
+          src="/logos/Quick Pay LOGO.png"
+          alt="QuickPay logo"
+          width={160}
+          height={40}
+          priority
+        />
+        
+      </div>
 
       {/* Main links */}
       <nav className="flex flex-col gap-3 flex-1">
@@ -43,7 +53,7 @@ export default function Sidebar() {
             key={link.name}
             href={link.href}
             onClick={() => setActive(link.name)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition 
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition
               ${active === link.name ? "bg-blue-900" : "hover:bg-blue-800"}`}
           >
             {link.icon}
@@ -53,7 +63,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Separator */}
-      <div className="border-t border-blue-500 my-4"></div>
+      <div className="border-t border-blue-500 my-4" />
 
       {/* Bottom links */}
       <nav className="flex flex-col gap-3">
@@ -62,7 +72,7 @@ export default function Sidebar() {
             key={link.name}
             href={link.href}
             onClick={() => setActive(link.name)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition 
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition
               ${active === link.name ? "bg-blue-900" : "hover:bg-blue-800"}`}
           >
             {link.icon}
@@ -70,6 +80,6 @@ export default function Sidebar() {
           </Link>
         ))}
       </nav>
-    </div>
+    </aside>
   );
 }
