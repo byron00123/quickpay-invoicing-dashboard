@@ -1,12 +1,13 @@
 "use client";
 
 import { XMarkIcon, ClipboardIcon } from "@heroicons/react/24/outline";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import PreviewInvoiceModal from "./PreviewInvoiceModal";
 import { AppDispatch } from "@/store/index";
 import { addInvoice, closeInvoice } from "@/store/paymentSlice";
 import { invoiceSchema, InvoiceFormData } from "@/utils/invoiceSchema";
+import { supabase } from "@/lib/supabase/client";
 
 interface Props {
   open: boolean;
@@ -15,8 +16,8 @@ interface Props {
 
 interface Item {
   name: string;
-  qty: string; // keep as string for typing
-  price: string; // keep as string for typing
+  qty: string;
+  price: string;
 }
 
 export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
@@ -38,6 +39,8 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
 
   const [errors, setErrors] = useState<string[]>([]);
+  const [newInvoiceNumber, setNewInvoiceNumber] = useState("");
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
   const recipients = [
     "Alex Parkinson (alex@email.com)",
@@ -55,15 +58,46 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
     }, 0);
   }, [items]);
 
-  const handleSend = () => {
-    // Let Zod handle string -> number conversion
+  // Fetch logged-in user's company_id
+  useEffect(() => {
+    const fetchCompanyId = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("company_id")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Failed to fetch company_id:", profileError);
+        return;
+      }
+
+      console.log("Fetched company ID:", profileData.company_id);
+      setCompanyId(profileData.company_id);
+    };
+
+    fetchCompanyId();
+  }, []);
+
+  const handleSend = async () => {
+    if (!companyId) {
+      alert("Cannot create invoice: missing company ID.");
+      return;
+    }
+
     const result = invoiceSchema.safeParse({
       recipient: selectedRecipient,
       description,
       issuedOn,
       dueOn,
       recurring,
-      items, // qty & price as strings; Zod transforms them
+      items,
       notes,
     });
 
@@ -76,21 +110,68 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
     }
 
     setErrors([]);
-    const formData: InvoiceFormData = result.data; // Now qty & price are numbers
-
+    const formData: InvoiceFormData = result.data;
     const total = formData.items.reduce((sum, item) => sum + item.qty * item.price, 0);
 
-    const newInvoiceNumber = `#INV${Math.floor(Math.random() * 9000 + 1000)}`;
-    const newInvoice = {
-      no: newInvoiceNumber,
-      date: issuedOn,
-      client: selectedRecipient,
-      amount: `$${total.toFixed(2)}`,
-      status: recurring ? "Draft" : "Pending",
-    };
+    const invoiceNo = `INV${Math.floor(Math.random() * 9000 + 1000)}`;
+    setNewInvoiceNumber(invoiceNo);
 
-    dispatch(addInvoice(newInvoice));
-    dispatch(closeInvoice());
+    // Log everything for debugging
+    const invoicePayload = {
+      company_id: companyId,
+      invoice_number: invoiceNo,
+      recipient: formData.recipient,
+      recipient_address: "123 Main St, City, Country",
+      description: formData.description,
+      issued_on: formData.issuedOn,
+      due_on: formData.dueOn,
+      notes: formData.notes || "",
+      total: total,
+      status: formData.recurring ? "Draft" : "Pending",
+    };
+    console.log("Inserting invoice payload:", invoicePayload);
+
+    try {
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from("invoices")
+        .insert(invoicePayload)
+        .select("id")
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      const invoiceId = invoiceData.id;
+
+      const itemsToInsert = formData.items.map((item) => ({
+        invoice_id: invoiceId,
+        name: item.name,
+        qty: item.qty,
+        price: item.price,
+        
+      }));
+
+      console.log("Inserting invoice items:", itemsToInsert);
+
+      const { error: itemsError } = await supabase.from("invoice_items").insert(itemsToInsert);
+      if (itemsError) throw itemsError;
+
+      dispatch(
+        addInvoice({
+          id: invoiceNo,
+          no: invoiceNo,
+          date: formData.issuedOn,
+          client: formData.recipient,
+          amount: `$${total.toFixed(2)}`,
+          status: formData.recurring ? "Draft" : "Pending",
+        })
+      );
+
+      dispatch(closeInvoice());
+      setModalOpen(false);
+    } catch (error) {
+      console.error("Supabase error:", error);
+      alert("Failed to save invoice. Check console for details.");
+    }
   };
 
   return (
@@ -114,7 +195,9 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
           <div className="flex-1 flex flex-col gap-2">
             <h2 className="text-lg font-semibold text-black">Create new invoice</h2>
             <div className="flex justify-between items-center">
-              <p className="text-xl font-bold text-black">#AL2545</p>
+              <p className="text-xl font-bold text-black">{`#${newInvoiceNumber || Math.floor(
+                Math.random() * 9000 + 1000
+              )}`}</p>
               <button className="flex items-center gap-1 text-blue-600 font-medium hover:underline">
                 <ClipboardIcon className="w-4 h-4" />
                 Copy payment link
@@ -150,12 +233,7 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
             {recipientOpen && (
@@ -178,9 +256,7 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
 
           {/* Description */}
           <div>
-            <label className="text-sm font-medium text-black">
-              Project / Description
-            </label>
+            <label className="text-sm font-medium text-black">Project / Description</label>
             <input
               className="mt-1 w-full border rounded px-3 py-2 text-black"
               value={description}
@@ -216,9 +292,7 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
               onChange={() => setRecurring(!recurring)}
               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-0"
             />
-            <span className="text-sm text-black">
-              This is a recurring invoice (monthly)
-            </span>
+            <span className="text-sm text-black">This is a recurring invoice (monthly)</span>
           </div>
 
           {/* Items */}
@@ -317,16 +391,18 @@ export default function CreateInvoiceSlideOver({ open, onClose }: Props) {
         </div>
       </div>
 
+      {/* Preview modal */}
       <PreviewInvoiceModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        invoiceNumber="#AL2545"
+        invoiceNumber={newInvoiceNumber}
         description={description}
         issuedOn={issuedOn}
         dueOn={dueOn}
         recipient={selectedRecipient}
         recipientAddress="123 Main St, City, Country"
         items={items}
+        notes={notes}
         total={totalSum}
       />
     </>

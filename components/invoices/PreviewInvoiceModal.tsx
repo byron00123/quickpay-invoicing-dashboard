@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useSelector } from "react-redux";
 import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { RootState } from "@/store";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase/client"; // Supabase client
 
 interface Item {
   name: string;
@@ -19,7 +23,14 @@ interface PreviewInvoiceModalProps {
   recipient: string;
   recipientAddress: string;
   items: Item[];
+  notes?: string;
   total: number;
+}
+
+interface CompanyInfo {
+  name: string;
+  logo_url: string;
+  brand_color: string;
 }
 
 export default function PreviewInvoiceModal({
@@ -32,31 +43,55 @@ export default function PreviewInvoiceModal({
   recipient,
   recipientAddress,
   items,
+  notes,
   total,
 }: PreviewInvoiceModalProps) {
-  const [notes, setNotes] = useState("");
+  const { logoUrl, brandColor, companyName } = useSelector(
+    (state: RootState) => state.settings
+  );
+
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo>({
+    name: companyName || "Your Company",
+    logo_url: logoUrl || "https://via.placeholder.com/80",
+    brand_color: brandColor || "#3b82f6",
+  });
+
+  // Fetch company info from Supabase if you want real-time data
+  useEffect(() => {
+    async function fetchCompanyInfo() {
+      const { data, error } = await supabase
+        .from("company_settings")
+        .select("*")
+        .single();
+
+      if (data && !error) {
+        setCompanyInfo({
+          name: data.name || companyName || "Your Company",
+          logo_url: data.logo_url || logoUrl || "https://via.placeholder.com/80",
+          brand_color: data.brand_color || brandColor || "#3b82f6",
+        });
+      }
+    }
+
+    fetchCompanyInfo();
+  }, [companyName, logoUrl, brandColor]);
 
   if (!open) return null;
 
-  // Mock company details (can later be taken from Redux)
-  const companyLogoUrl = "https://via.placeholder.com/80";
-  const companyName = "Acme Corp.";
-  const companyAddress = "123 Main Street, Cityville, Country";
+  const { name: displayCompanyName, logo_url: companyLogoUrl, brand_color: primaryColor } =
+    companyInfo;
 
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/40 z-50"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/40 z-50" onClick={onClose} />
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl p-8 relative overflow-y-auto max-h-[90vh] flex flex-col">
           {/* Header */}
           <div className="flex justify-between mb-4">
-            {/* Left: Invoice number + description + dates */}
+            {/* Left */}
             <div>
               <h1 className="text-2xl font-bold text-black">{invoiceNumber}</h1>
               <p className="text-base text-black mt-1">{description}</p>
@@ -73,15 +108,16 @@ export default function PreviewInvoiceModal({
               </div>
             </div>
 
-            {/* Right: Company details */}
+            {/* Right */}
             <div className="text-right flex flex-col items-end">
               <img
                 src={companyLogoUrl}
                 alt="Company Logo"
                 className="w-20 h-20 object-contain mb-2"
               />
-              <p className="text-black font-semibold">{companyName}</p>
-              <p className="text-black text-sm">{companyAddress}</p>
+              <p className="font-semibold" style={{ color: primaryColor }}>
+                {displayCompanyName}
+              </p>
             </div>
           </div>
 
@@ -92,7 +128,7 @@ export default function PreviewInvoiceModal({
             <p>{recipientAddress}</p>
           </div>
 
-          {/* Items table */}
+          {/* Items */}
           <div className="bg-gray-50 rounded-lg shadow p-4 mb-4 overflow-x-auto">
             <table className="w-full border-collapse text-base text-black">
               <thead>
@@ -109,10 +145,10 @@ export default function PreviewInvoiceModal({
                     (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0);
                   return (
                     <tr key={idx}>
-                      <td className="py-3 text-black">{item.name}</td>
-                      <td className="py-3 text-center text-black">{item.qty}</td>
-                      <td className="py-3 text-center text-black">${item.price}</td>
-                      <td className="py-3 text-right text-black">${lineTotal.toFixed(2)}</td>
+                      <td className="py-3">{item.name}</td>
+                      <td className="py-3 text-center">{item.qty}</td>
+                      <td className="py-3 text-center">${item.price}</td>
+                      <td className="py-3 text-right">${lineTotal.toFixed(2)}</td>
                     </tr>
                   );
                 })}
@@ -122,37 +158,45 @@ export default function PreviewInvoiceModal({
 
           {/* Notes + Total */}
           <div className="flex justify-between items-start mb-6 gap-4">
-            <textarea
-              className="flex-1 border rounded p-2 text-base text-black resize-none placeholder-gray-400"
-              placeholder="Additional notes for the client"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={4}
-            />
+            <div className="flex-1 border rounded p-3 text-black min-h-[96px]">
+              <p className="font-semibold mb-1">Notes</p>
+              <p className="text-sm whitespace-pre-wrap">
+                {notes || "No additional notes provided."}
+              </p>
+            </div>
 
-            <div className="flex-shrink-0 flex flex-col justify-start text-xl font-bold text-black">
-              <span>Total Amount: ${total.toFixed(2)}</span>
+            <div className="flex-shrink-0 text-xl font-bold text-black">
+              Total: ${total.toFixed(2)}
             </div>
           </div>
 
           {/* Footer */}
           <div className="mt-auto flex justify-between items-start pt-6 border-t">
             <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2 text-blue-600 font-medium cursor-pointer hover:underline">
+              <div
+                className="flex items-center gap-2 font-medium cursor-pointer hover:underline"
+                style={{ color: primaryColor }}
+              >
                 <ArrowDownTrayIcon className="w-5 h-5" />
                 DOWNLOAD INVOICE
               </div>
+
               <p className="text-sm text-black">
                 Update logo and brand color in{" "}
-                <span className="text-blue-600 font-medium cursor-pointer">
+                <Link
+                  href="/dashboard/settings"
+                  className="font-medium hover:underline"
+                  style={{ color: primaryColor }}
+                >
                   payment settings
-                </span>.
+                </Link>
+                .
               </p>
             </div>
 
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-black text-black rounded bg-white hover:bg-gray-100 font-medium"
+              className="px-4 py-2 border border-black rounded bg-white hover:bg-gray-100 font-medium text-black"
             >
               Close
             </button>

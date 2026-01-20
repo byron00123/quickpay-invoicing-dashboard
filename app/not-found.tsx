@@ -18,7 +18,7 @@ export default function NotFoundPage() {
         </p>
 
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/dashboard/home")}
           className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
         >
           <ArrowLeftIcon className="w-5 h-5" />
