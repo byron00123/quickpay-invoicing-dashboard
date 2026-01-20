@@ -1,6 +1,6 @@
 "use client";
 
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 
 interface Item {
   name: string;
@@ -35,79 +35,123 @@ export default function PreviewInvoiceModal({
 }: PreviewInvoiceModalProps) {
   if (!open) return null;
 
+  // Mock company details
+  const companyLogoUrl = "https://via.placeholder.com/80";
+  const companyName = "Acme Corp.";
+  const companyAddress = "123 Main Street, Cityville, Country";
+
   return (
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/30 z-50"
+        className="fixed inset-0 bg-black/40 z-50"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl p-6 relative overflow-y-auto max-h-full">
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded"
-          >
-            <XMarkIcon className="w-5 h-5 text-black" />
-          </button>
-
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl p-8 relative overflow-y-auto max-h-[90vh] flex flex-col">
           {/* Header */}
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex justify-between mb-4">
+            {/* Left: Invoice number + description + dates */}
             <div>
-              <h1 className="text-xl font-bold">{invoiceNumber}</h1>
-              <p className="text-sm text-gray-600">{description}</p>
+              <h1 className="text-2xl font-bold text-black">{invoiceNumber}</h1>
+              <p className="text-base text-black mt-1">{description}</p>
+
+              {/* Issued on / Due on side by side */}
+              <div className="flex gap-6 mt-2 text-base text-black">
+                <div className="flex flex-col">
+                  <span className="font-semibold">Issued on</span>
+                  <span>{issuedOn}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-semibold">Due on</span>
+                  <span>{dueOn}</span>
+                </div>
+              </div>
             </div>
-            <div className="text-right text-sm text-gray-600">
-              <p>Issued on: {issuedOn}</p>
-              <p>Due on: {dueOn}</p>
+
+            {/* Right: Company details */}
+            <div className="text-right flex flex-col items-end">
+              <img
+                src={companyLogoUrl}
+                alt="Company Logo"
+                className="w-20 h-20 object-contain mb-2"
+              />
+              <p className="text-black font-semibold">{companyName}</p>
+              <p className="text-black text-sm">{companyAddress}</p>
             </div>
           </div>
 
           {/* Recipient */}
-          <div className="mb-4 text-sm">
-            <p className="font-medium">Invoice for:</p>
+          <div className="mb-6 text-base text-black">
+            <p className="font-semibold text-black mb-1">Invoice for:</p>
             <p>{recipient}</p>
             <p>{recipientAddress}</p>
           </div>
 
-          {/* Items table */}
-          <table className="w-full border-collapse mb-4 text-sm">
-            <thead>
-              <tr>
-                <th className="border-b py-2 text-left">Item</th>
-                <th className="border-b py-2 text-center">Qty</th>
-                <th className="border-b py-2 text-center">Price</th>
-                <th className="border-b py-2 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, idx) => {
-                const lineTotal =
-                  (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0);
-                return (
-                  <tr key={idx}>
-                    <td className="py-2">{item.name}</td>
-                    <td className="py-2 text-center">{item.qty}</td>
-                    <td className="py-2 text-center">${item.price}</td>
-                    <td className="py-2 text-right">${lineTotal}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          {/* Items table inside card */}
+          <div className="bg-gray-50 rounded-lg shadow p-4 mb-4 overflow-x-auto">
+            <table className="w-full border-collapse text-base text-black">
+              <thead>
+                <tr>
+                  <th className="border-b py-3 text-left">Item</th>
+                  <th className="border-b py-3 text-center">Qty</th>
+                  <th className="border-b py-3 text-center">Price</th>
+                  <th className="border-b py-3 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, idx) => {
+                  const lineTotal =
+                    (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0);
+                  return (
+                    <tr key={idx}>
+                      <td className="py-3 text-black">{item.name}</td>
+                      <td className="py-3 text-center text-black">{item.qty}</td>
+                      <td className="py-3 text-center text-black">${item.price}</td>
+                      <td className="py-3 text-right text-black">${lineTotal.toFixed(2)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-          {/* Total */}
-          <div className="flex justify-end text-lg font-bold">
-            <span>Total Amount: ${total}</span>
+          {/* Total outside the card */}
+          <div className="flex justify-end text-xl font-bold text-black mb-6">
+            <span>Total Amount: ${total.toFixed(2)}</span>
           </div>
 
           {/* Footer notes */}
-          <p className="mt-4 text-xs text-gray-500">
+          <p className="mt-2 text-base text-black mb-4">
             Here we can write additional notes for the client to get a better understanding of this invoice.
           </p>
+
+          {/* Footer */}
+          <div className="mt-auto flex justify-between items-start pt-6 border-t">
+            {/* Left side */}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 text-blue-600 font-medium cursor-pointer hover:underline">
+                <ArrowDownTrayIcon className="w-5 h-5" />
+                DOWNLOAD INVOICE
+              </div>
+              <p className="text-sm text-black">
+                You can update your logo and the brand color in{" "}
+                <span className="text-blue-600 font-medium cursor-pointer">
+                  payment settings
+                </span>.
+              </p>
+            </div>
+
+            {/* Right side */}
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-black text-black rounded bg-white hover:bg-gray-100 font-medium"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </>
